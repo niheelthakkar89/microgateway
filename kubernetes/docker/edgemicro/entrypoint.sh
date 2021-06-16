@@ -125,12 +125,17 @@ start_edge_micro() {
   echo $CMDSTRING
 }
 
-CON3=$(echo $EDGEMICRO_CONFIG | base64 -d | grep -Eo 'to_console: (true|True|TRUE)')
+#CON3=$(echo $EDGEMICRO_CONFIG | base64 -d | grep -Eo 'to_console: (true|True|TRUE)')
 
-echo "CON3==> $CON3"
-if [[ -n "$CON3" ]]
+echo "DISABLE_EDGEMICRO_LOG==> $DISABLE_EDGEMICRO_LOG"
+if [[ -n "$DISABLE_EDGEMICRO_LOG"  ]]
   then
-    start_edge_micro  2>&1
+    if [ "$DISABLE_EDGEMICRO_LOG" = "true" ]
+      then
+        start_edge_micro  2>&1
+      else
+        start_edge_micro  2>&1 | tee -i $LOG_FILE
+    fi
   else
     start_edge_micro  2>&1 | tee -i $LOG_FILE
 fi
