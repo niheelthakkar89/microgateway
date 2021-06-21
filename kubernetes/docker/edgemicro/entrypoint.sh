@@ -1,5 +1,6 @@
 #!/bin/bash
 
+source microgateway/kubernetes/docker/edgemicro/yaml-parser.sh
 APIGEE_ROOT="/opt/apigee"
 EDGEMICRO_PLUGIN_DIRECTORY="/opt/apigee/plugins"
 
@@ -123,12 +124,42 @@ start_edge_micro() {
   echo $CMDSTRING
 }
 
-start_edge_micro  2>&1 | tee -i $LOG_FILE
+validate_config_to_console(){
+    
+    EMGCONF_INVALID=$(echo "$EDGEMICRO_CONFIG" | base64 -d | perl -wln -e 'print if /\s*[:](?!\/)(?!\\)[^\s]/')
+
+    if [[ "$EMGCONF_INVALID" = "" ]]
+    then
+        PARSEYML=$(parse_yaml $EDGEMICRO_CONFIG && echo)
+        eval  "${PARSEYML}"
+        if [ "$edgemicro_logging_to_console" = "true" ] || [ "$edgemicro_logging_to_console" = "True" ] || [ "$edgemicro_logging_to_console" = "TRUE" ]
+        then
+            echo "true"
+        else
+            echo "false"
+        fi
+    else
+        echo "invalid"
+    fi
+}
+
+VAILDATE_TOCONSOLE=$(validate_config_to_console)
+if [ "$VAILDATE_TOCONSOLE" = "true" ]
+  then
+    start_edge_micro  2>&1
+  else  
+    start_edge_micro  2>&1 | tee -i $LOG_FILE
+fi    
 
 # SIGUSR1-handler
 my_handler() {
   echo "my_handler" >> /tmp/entrypoint.log
-  /bin/bash -c "cd ${APIGEE_ROOT} && edgemicro stop" 2>&1  | tee -i $LOG_FILE
+  if [ "$VAILDATE_TOCONSOLE" = "true" ]
+    then
+      /bin/bash -c "cd ${APIGEE_ROOT} && edgemicro stop" 2>&1
+    else
+      /bin/bash -c "cd ${APIGEE_ROOT} && edgemicro stop" 2>&1  | tee -i $LOG_FILE
+  fi
 }
 
 # SIGTERM-handler
@@ -143,7 +174,14 @@ term_handler() {
     echo "term_handler_sleep $EDGEMICRO_STOP_DELAY" >> /tmp/entrypoint.log
     sleep $EDGEMICRO_STOP_DELAY
   fi
-  /bin/bash -c "cd ${APIGEE_ROOT} && edgemicro stop"  2>&1 | tee -i $LOG_FILE
+
+  if [ "$VAILDATE_TOCONSOLE" = "true" ]
+    then
+      /bin/bash -c "cd ${APIGEE_ROOT} && edgemicro stop" 2>&1
+    else
+      /bin/bash -c "cd ${APIGEE_ROOT} && edgemicro stop"  2>&1 | tee -i $LOG_FILE
+  fi
+
   exit 143; # 128 + 15 -- SIGTERM
 }
 
