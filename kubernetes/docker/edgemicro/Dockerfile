@@ -49,4 +49,10 @@ RUN /bin/bash /tmp/installedgemicro.sh&& \
 EXPOSE 8000
 EXPOSE 8443
 
+CMD ["npm", "start"]
+
+STOPSIGNAL SIGTERM
+STOPSIGNAL SIGINT
+STOPSIGNAL SIGUSR1
+
 ENTRYPOINT ["/opt/apigee/entrypoint.sh"]

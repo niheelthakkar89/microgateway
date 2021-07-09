@@ -9,10 +9,28 @@ EDGEMICRO_PLUGIN_DIRECTORY="/opt/apigee/plugins"
 LOG_FILE=${APIGEE_ROOT}/logs/edgemicro.log
 echo "Log Location: [ $LOG_FILE ]"
 echo "SIGTERM delay : [ $EDGEMICRO_STOP_DELAY ]"
+SOCK_FILE=edgemicro.sock
+PID_FILE=edgemicro.pid
 
 IFS=
 
 start_edge_micro() {
+
+  if [ -e "$SOCK_FILE" ]
+    then
+      $(chmod 777 "$SOCK_FILE")
+      $(rm -f "$SOCK_FILE")
+      echo "removed sock file"
+    else 
+      echo "sock file not found" 
+  fi
+
+  if [[ -e "$PID_FILE" ]] 
+    then
+      $(chmod 0644 "$PID_FILE")
+      $(rm -f "$PID_FILE")
+      echo "removed pid file"
+  fi
   
   if  [[ -n "$SERVICE_NAME" ]]
     then
@@ -62,7 +80,7 @@ start_edge_micro() {
   BACKGROUND=" &"
   MGSTART=" edgemicro start -o $EDGEMICRO_ORG -e $EDGEMICRO_ENV -k $EDGEMICRO_KEY -s $EDGEMICRO_SECRET -r $EDGEMICRO_PORT -d $EDGEMICRO_PLUGIN_DIRECTORY"
   LOCALPROXY=" export EDGEMICRO_LOCAL_PROXY=$EDGEMICRO_LOCAL_PROXY "
-  MGDIR="cd ${APIGEE_ROOT} "
+  MGDIR="${APIGEE_ROOT} "
   DECORATOR=" export EDGEMICRO_DECORATOR=$EDGEMICRO_DECORATOR "
   DEBUG=" export DEBUG=$DEBUG "
   EDGEMICRO_PROXY=""
@@ -112,16 +130,16 @@ start_edge_micro() {
   if [[ -n "$EDGEMICRO_LOCAL_PROXY" ]]
     then
     DECORATOR=" export EDGEMICRO_DECORATOR=1 "
-    CMDSTRING="$MGDIR && $DECORATOR &&  $LOCALPROXY && $MGSTART -a $PROXY_NAME -v 1 -b / -t http://localhost:$TARGET_PORT  $BACKGROUND"
+    CMDSTRING="$DECORATOR &&  $LOCALPROXY && $MGSTART -a $PROXY_NAME -v 1 -b / -t http://localhost:$TARGET_PORT  $BACKGROUND"
   else
-    CMDSTRING="$MGDIR && $MGSTART $BACKGROUND"
+    CMDSTRING="$MGSTART $BACKGROUND"
   fi
 
   if [[ -n "$DEBUG" ]]
     then
-    /bin/bash -c "$DEBUG && $CMDSTRING"
-  else
-    /bin/bash -c "$CMDSTRING"
+      /bin/bash -c "$DEBUG && $CMDSTRING"
+    else
+      /bin/bash -c "$CMDSTRING"
   fi
 
   echo $CMDSTRING
@@ -146,7 +164,7 @@ my_handler() {
     then
       /bin/bash -c "cd ${APIGEE_ROOT} && edgemicro stop" 2>&1
     else
-      /bin/bash -c "cd ${APIGEE_ROOT} && edgemicro stop" 2>&1  | tee -i $LOG_FILE
+      /bin/bash -c "cd ${APIGEE_ROOT} && edgemicro stop"  2>&1 | tee -i $LOG_FILE
   fi
 }
 
